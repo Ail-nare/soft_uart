@@ -1,5 +1,4 @@
-
-#include "raspberry_soft_uart.h"
+#include "khadas_soft_uart.h"
 #include "queue.h"
 
 #include <linux/gpio.h> 
@@ -21,12 +20,13 @@ static DEFINE_MUTEX(current_tty_mutex);
 static struct hrtimer timer_tx;
 static struct hrtimer timer_rx;
 static ktime_t period;
+static ktime_t period1;
 static int gpio_tx = 0;
 static int gpio_rx = 0;
 static int rx_bit_index = -1;
 
 /**
- * Initializes the Raspberry Soft UART infrastructure.
+ * Initializes the Khadas SBC Soft UART infrastructure.
  * This must be called during the module initialization.
  * The GPIO pin used as TX is configured as output.
  * The GPIO pin used as RX is configured as input.
@@ -34,7 +34,7 @@ static int rx_bit_index = -1;
  * @param gpio_rx GPIO pin used as RX
  * @return 1 if the initialization is successful. 0 otherwise.
  */
-int raspberry_soft_uart_init(const int _gpio_tx, const int _gpio_rx)
+int khadas_soft_uart_init(const int _gpio_tx, const int _gpio_rx)
 {
   bool success = true;
   
@@ -71,9 +71,9 @@ int raspberry_soft_uart_init(const int _gpio_tx, const int _gpio_rx)
 }
 
 /**
- * Finalizes the Raspberry Soft UART infrastructure.
+ * Finalizes the Khadas SBC Soft UART infrastructure.
  */
-int raspberry_soft_uart_finalize(void)
+int khadas_soft_uart_finalize(void)
 {
   free_irq(gpio_to_irq(gpio_rx), NULL);
   gpio_set_value(gpio_tx, 0);
@@ -87,7 +87,7 @@ int raspberry_soft_uart_finalize(void)
  * @param tty
  * @return 1 if the operation is successful. 0 otherwise.
  */
-int raspberry_soft_uart_open(struct tty_struct* tty)
+int khadas_soft_uart_open(struct tty_struct* tty)
 {
   int success = 0;
   mutex_lock(&current_tty_mutex);
@@ -105,7 +105,7 @@ int raspberry_soft_uart_open(struct tty_struct* tty)
 /**
  * Closes the Soft UART.
  */
-int raspberry_soft_uart_close(void)
+int khadas_soft_uart_close(void)
 {
   int success = 0;
   mutex_lock(&current_tty_mutex);
@@ -126,9 +126,10 @@ int raspberry_soft_uart_close(void)
  * @param baudrate desired baudrate
  * @return 1 if the operation is successful. 0 otherwise.
  */
-int raspberry_soft_uart_set_baudrate(const int baudrate) 
+int khadas_soft_uart_set_baudrate(const int baudrate) 
 {
   period = ktime_set(0, 1000000000/baudrate);
+  period1 = ktime_set(0, 500000000/baudrate);
   gpio_set_debounce(gpio_rx, 1000/baudrate/2);
   return 1;
 }
@@ -139,7 +140,7 @@ int raspberry_soft_uart_set_baudrate(const int baudrate)
  * @param string_size size of the given string
  * @return The amount of characters successfully added to the queue.
  */
-int raspberry_soft_uart_send_string(const unsigned char* string, int string_size)
+int khadas_soft_uart_send_string(const unsigned char* string, int string_size)
 {
   int result = enqueue_string(&queue_tx, string, string_size);
   
@@ -156,7 +157,7 @@ int raspberry_soft_uart_send_string(const unsigned char* string, int string_size
  * Gets the number of characters that can be added to the TX queue.
  * @return number of characters.
  */
-int raspberry_soft_uart_get_tx_queue_room(void)
+int khadas_soft_uart_get_tx_queue_room(void)
 {
   return get_queue_room(&queue_tx);
 }
@@ -165,7 +166,7 @@ int raspberry_soft_uart_get_tx_queue_room(void)
  * Gets the number of characters in the TX queue.
  * @return number of characters.
  */
-int raspberry_soft_uart_get_tx_queue_size(void)
+int khadas_soft_uart_get_tx_queue_size(void)
 {
   return get_queue_size(&queue_tx);
 }
@@ -182,7 +183,7 @@ static irq_handler_t handle_rx_start(unsigned int irq, void* device, struct pt_r
 {
   if (rx_bit_index == -1)
   {
-    hrtimer_start(&timer_rx, ktime_set(0, period / 2), HRTIMER_MODE_REL);
+    hrtimer_start(&timer_rx, ktime_set(0, period1.tv64), HRTIMER_MODE_REL);
   }
   return (irq_handler_t) IRQ_HANDLED;
 }

@@ -1,5 +1,5 @@
 
-#include "raspberry_soft_uart.h"
+#include "khadas_soft_uart.h"
 
 #include <linux/delay.h>
 #include <linux/module.h>
@@ -13,14 +13,14 @@
 #define TX_BUFFER_FLUSH_TIMEOUT 4000  // milliseconds
 
 MODULE_LICENSE("GPL");
-MODULE_AUTHOR("Adriano Marto Reis");
-MODULE_DESCRIPTION("Software-UART for Raspberry Pi");
+MODULE_AUTHOR("Yan <yan@foxmail.com>");
+MODULE_DESCRIPTION("Software-UART for Khadas SBC");
 MODULE_VERSION("0.2");
 
-static int gpio_tx = 17;
+static int gpio_tx = 474;
 module_param(gpio_tx, int, 0);
 
-static int gpio_rx = 27;
+static int gpio_rx = 475;
 module_param(gpio_rx, int, 0);
 
 // Module prototypes.
@@ -73,7 +73,7 @@ static int __init soft_uart_init(void)
 {
   printk(KERN_INFO "soft_uart: Initializing module...\n");
   
-  if (!raspberry_soft_uart_init(gpio_tx, gpio_rx))
+  if (!khadas_soft_uart_init(gpio_tx, gpio_rx))
   {
     printk(KERN_ALERT "soft_uart: Failed initialize GPIO.\n");
     return -ENOMEM;
@@ -119,9 +119,9 @@ static int __init soft_uart_init(void)
   soft_uart_driver->type                  = TTY_DRIVER_TYPE_SERIAL;
   soft_uart_driver->subtype               = SERIAL_TYPE_NORMAL;
   soft_uart_driver->init_termios          = tty_std_termios;
-  soft_uart_driver->init_termios.c_ispeed = 4800;
-  soft_uart_driver->init_termios.c_ospeed = 4800;
-  soft_uart_driver->init_termios.c_cflag  = B4800 | CREAD | CS8 | CLOCAL;
+  soft_uart_driver->init_termios.c_ispeed = 9600;
+  soft_uart_driver->init_termios.c_ospeed = 9600;
+  soft_uart_driver->init_termios.c_cflag  = B9600 | CREAD | CS8 | CLOCAL;
 
   // Sets the callbacks for the driver.
   tty_set_operations(soft_uart_driver, &soft_uart_operations);
@@ -151,7 +151,7 @@ static void __exit soft_uart_exit(void)
   printk(KERN_INFO "soft_uart: Finalizing the module...\n");
   
   // Finalizes the soft UART.
-  if (!raspberry_soft_uart_finalize())
+  if (!khadas_soft_uart_finalize())
   {
     printk(KERN_ALERT "soft_uart: Something went wrong whilst finalizing the soft UART.\n");
   }
@@ -176,7 +176,7 @@ static int soft_uart_open(struct tty_struct* tty, struct file* file)
 {
   int error = NONE;
     
-  if (raspberry_soft_uart_open(tty))
+  if (khadas_soft_uart_open(tty))
   {
     printk(KERN_INFO "soft_uart: Device opened.\n");
   }
@@ -198,14 +198,14 @@ static void soft_uart_close(struct tty_struct* tty, struct file* file)
 {
   // Waits for the TX buffer to be empty before closing the UART.
   int wait_time = 0;
-  while ((raspberry_soft_uart_get_tx_queue_size() > 0)
+  while ((khadas_soft_uart_get_tx_queue_size() > 0)
     && (wait_time < TX_BUFFER_FLUSH_TIMEOUT))
   {
     msleep(100);
     wait_time += 100;
   }
   
-  if (raspberry_soft_uart_close())
+  if (khadas_soft_uart_close())
   {
     printk(KERN_INFO "soft_uart: Device closed.\n");
   }
@@ -224,7 +224,7 @@ static void soft_uart_close(struct tty_struct* tty, struct file* file)
  */
 static int soft_uart_write(struct tty_struct* tty, const unsigned char* buffer, int buffer_size)
 {
-  return raspberry_soft_uart_send_string(buffer, buffer_size);
+  return khadas_soft_uart_send_string(buffer, buffer_size);
 }
 
 /**
@@ -234,7 +234,7 @@ static int soft_uart_write(struct tty_struct* tty, const unsigned char* buffer, 
  */
 static int soft_uart_write_room(struct tty_struct* tty)
 {
-  return raspberry_soft_uart_get_tx_queue_room();
+  return khadas_soft_uart_get_tx_queue_room();
 }
 
 /**
@@ -252,7 +252,7 @@ static void soft_uart_flush_buffer(struct tty_struct* tty)
  */
 static int soft_uart_chars_in_buffer(struct tty_struct* tty)
 {
-  return raspberry_soft_uart_get_tx_queue_size();
+  return khadas_soft_uart_get_tx_queue_size();
 }
 
 /**
@@ -292,7 +292,7 @@ static void soft_uart_set_termios(struct tty_struct* tty, struct ktermios* termi
   }
   
   // Configure the baudrate.
-  if (!raspberry_soft_uart_set_baudrate(baudrate))
+  if (!khadas_soft_uart_set_baudrate(baudrate))
   {
     printk(KERN_ALERT "soft_uart: Invalid baudrate.\n");
   }
