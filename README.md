@@ -45,6 +45,7 @@ Loading module with custom parameters:
 sudo insmod soft_uart.ko gpio_tx=474 gpio_rx=475
 ```
 
+default buand_rate is 9600.
 
 ## Usage
 
@@ -57,7 +58,7 @@ sudo usermod -aG dialout <username>
 
 Usage examples:
 ```
-minicom -b 9600 -D /dev/ttySOFT0
-cat /dev/ttySOFT0
-echo "Hello Khadas!" > /dev/ttySOFT0
+$ minicom -b 9600 -D /dev/ttySOFT0
+$ stty -F /dev/ttySOFT0 ispeed 9600 ospeed 9600 cs8
+$ echo "Hello Khadas!" > /dev/ttySOFT0
 ```
